@@ -11,15 +11,13 @@ knitr::opts_chunk$set()
 ```{r package, message=FALSE}
 # This chunk loads all the packages used in this homework
 library(tidyverse)
-library(httr)
-library(jsonlite)
+library(p8105.datasets)
 ```
 
 # Problem 1
 
 ## Load instacart dataset
 ```{r}
-library(p8105.datasets)
 data("instacart")
 ```
 
@@ -57,14 +55,14 @@ length(unique(dplyr::pull(instacart, aisle_id)))
 There are 134 aisles.
 
 ```{r}
-mode_aisle <- function(v) {
-   uniq <- unique(v)
-   uniq[which.max(tabulate(match(v, uniq)))]
-}
-mode_aisle((dplyr::pull(instacart, aisle_id)))
+instacart %>%
+  group_by(aisle_id) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  slice(1:1)
 ```
 
-The aisle with id 83, "fresh vegetables," is which the most items ordered from.
+The aisle with id 83, "fresh vegetables," is which the most items ordered from, and it is ordered 150609 times.
 
 * Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
@@ -99,6 +97,7 @@ instacart %>%
 * Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers 
 
 ```{r}
+#week_day <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 instacart %>%
   filter(
     product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")
@@ -106,15 +105,18 @@ instacart %>%
   mutate(order_dow = lubridate::wday(order_dow + 1, label = TRUE)) %>%
   group_by(product_name, order_dow) %>%
   summarise(mean = mean(order_hour_of_day)) %>%
-  knitr::kable(col.names = c("Product", "Week Day", "Mean hour of the day"))
+  knitr::kable(digits = 1, col.names = c("Product", "Week Day", "Mean hour of the day"))
 ```
 
 # Problem 2
 
 ## Load BRFSS dataset
 ```{r}
-library(p8105.datasets)
-data("instacart")
+data("brfss_smart2010")
+
+df_brfss_smart2010_clean <- 
+  brfss_smart2010 %>% 
+  janitor::clean_names()
 ```
 
 
