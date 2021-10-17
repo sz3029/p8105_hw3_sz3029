@@ -1,0 +1,25 @@
+---
+title: "HW 3"
+author: Shihui Zhu sz3029
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+```
+
+```{r package, message=FALSE}
+# This chunk loads all the packages used in this homework
+library(readxl)
+library(tidyverse)
+```
+
+# Problem 1
+```{r}
+library(p8105.datasets)
+data("instacart")
+```
