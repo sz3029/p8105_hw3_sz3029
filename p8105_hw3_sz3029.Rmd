@@ -19,7 +19,15 @@ library(tidyverse)
 ```
 
 # Problem 1
+
+## Load instacart dataset
 ```{r}
 library(p8105.datasets)
 data("instacart")
 ```
+
+## Description of the dataset
+
+
+
+
