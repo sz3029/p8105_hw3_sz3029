@@ -97,15 +97,17 @@ instacart %>%
 4. Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers 
 
 ```{r P_C, message=FALSE}
-#week_day <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 instacart %>%
   filter(
     product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")
   ) %>%
+  # change day value into human readable format
   mutate(order_dow = lubridate::wday(order_dow + 1, label = TRUE)) %>%
   group_by(product_name, order_dow) %>%
+  # change the table format to long
   summarise(mean = mean(order_hour_of_day), .groups = "drop") %>%
   spread(order_dow, mean) %>%
+  # add caption and col names
   knitr::kable(digits = 1, 
                col.names = c("Product", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
                caption = "The mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week")
@@ -115,8 +117,10 @@ instacart %>%
 
 ## Load BRFSS dataset
 ```{r clean_brfss}
+# load from p8105.dataset
 data("brfss_smart2010")
 
+# create the cleaned data frame
 brfss_smart2010 <- 
   brfss_smart2010 %>% 
   janitor::clean_names() %>%
@@ -171,7 +175,7 @@ There are `r length(dplyr::pull(more_than_7_2010, state))` states:
 
 2. Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state
 
-```{r spaghetti, message=FALSE}
+```{r spaghetti_data, message=FALSE}
 brfss_smart2010_spaghetti <-
   brfss_smart2010 %>%
   filter(response == "Excellent") %>%
@@ -182,7 +186,7 @@ brfss_smart2010_spaghetti
 ```
 
 Plot:
-```{r}
+```{r spaghetti_plot, warning=FALSE}
 brfss_smart2010_spaghetti %>%
   ggplot(aes(x = year, y = mean_data_value)) +
   geom_line(aes(color = state)) +
@@ -195,7 +199,7 @@ brfss_smart2010_spaghetti %>%
 ```
 
 * Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
-```{r}
+```{r two_panel_NY}
 brfss_smart2010 %>%
   filter(year %in% c("2006", "2010"),
          state == "NY") %>%
@@ -211,8 +215,48 @@ brfss_smart2010 %>%
   facet_grid(year ~ response)
 ```
 
+# Problem 3
 
+## Load and tidy data
 
+* include all originally observed variables and values
+* have useful variable names
+* include a weekday vs weekend variable
+* encode data with reasonable variable classes
+
+```{r load_tidy_d3, message=FALSE}
+# create the data frame
+df_accel <- 
+  #read data from csv file
+  read_csv('./accel_data.csv') %>%
+  #clean columns names
+  janitor::clean_names() %>% 
+  mutate(
+    weekday_weekend = ifelse(day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), "Weekday", "Weekend"),
+    day = factor(day, 
+    levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+  ) %>% 
+  select(week, day_id, day, weekday_weekend, everything()) %>% 
+  pivot_longer(
+    cols = activity_1:activity_1440,
+    names_prefix = "activity_",
+    values_to = "activity_counts",
+    names_to = "minute_order"
+  ) %>% 
+  mutate(minute_order = as.numeric(minute_order))
+
+df_accel
+```
+
+## Description
+
+## Analysis focus on the total activity over the day
+
+```{r}
+
+```
+
+## Activity over the course of the day
 
 
 
