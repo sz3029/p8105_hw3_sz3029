@@ -230,13 +230,15 @@ df_accel <-
   #read data from csv file
   read_csv('./accel_data.csv') %>%
   #clean columns names
-  janitor::clean_names() %>% 
+  janitor::clean_names() %>%
+  # add a weekday v.s. weekend column
   mutate(
     weekday_weekend = ifelse(day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), "Weekday", "Weekend"),
     day = factor(day, 
     levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
   ) %>% 
-  select(week, day_id, day, weekday_weekend, everything()) %>% 
+  select(week, day_id, day, weekday_weekend, everything()) %>%
+  # encode activity_k into numeric values
   pivot_longer(
     cols = activity_1:activity_1440,
     names_prefix = "activity_",
@@ -250,13 +252,88 @@ df_accel
 
 ## Description
 
+The accelerometer data contains `r nrow(df_accel)` observations of `r ncol(df_accel)` variables. The variables are ``r names(df_accel)``:
+
+* ``r names(df_accel)[1]``: week number, total of 5 weeks
+
+* ``r names(df_accel)[2]``: day number, total of 35 days
+
+* ``r names(df_accel)[3]``: at which day of that week
+
+* ``r names(df_accel)[4]``: weekday or weekend
+
+* ``r names(df_accel)[5]``: at which minute of that day
+
+* ``r names(df_accel)[6]``: activity counts
+
 ## Analysis focus on the total activity over the day
 
-```{r}
-
+```{r d3_day_count, message = FALSE}
+# create the data frame
+df_accel_amount_day <- 
+  df_accel %>% 
+  group_by(week, day) %>% 
+  mutate(total_counts_in_a_day = sum(activity_counts)) %>% 
+  select(-activity_counts, -minute_order) %>% 
+  distinct() %>% 
+  arrange(week, day)
 ```
+
+Create a table for total activity over the day
+
+`r knitr::kable(df_accel_amount_day, digits = 2, caption = "Total activity over the day")`
+
+```{r plot_day_counts}
+df_accel_amount_day %>% 
+  ggplot(aes(x = day_id, y = total_counts_in_a_day)) +
+  # create a scatterplot
+  geom_point(aes(color = weekday_weekend)) +
+  # add in the trend line
+  geom_line(alpha = 0.5) +
+  # add title, labels for x- and y- axis and caption
+  labs(
+    title = "Trend Plot for Sum of Day Value Across Days",
+    x = "Days",
+    y = "Total Activity Counts for Each Day",
+    caption = "Data from the Advanced Cardiac Care Center of CUMC"
+  ) +
+  scale_x_continuous(
+    # make the x-axis 1-35
+    breaks = c(1, 7, 14, 21, 28, 35),
+    labels = c('1', '7', '14', '21', '28', '35')
+  )
+```
+
+The trend plot shows that the total activity counts on weekend decreased over time, whereas the the total activity counts on weekday had no significant change over time.
 
 ## Activity over the course of the day
 
+* Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week
+
+```{r d3_inspection, message=FALSE}
+df_accel %>% 
+  group_by(day_id) %>% 
+  # convert minutes to hours
+  mutate(hour_order = ceiling(minute_order / 60)) %>% 
+  # group by hour and day
+  group_by(day_id, day, hour_order) %>% 
+  # Find the total activity for each hour
+  summarize(counts_by_hour = sum(activity_counts)) %>%
+  # hour v.s. hour counts, colored by day of the week
+  ggplot(aes(x = hour_order, y = counts_by_hour, color = day)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Plot for 24-hour Activity Time Courses for Each Day",
+    x = "Hour Order",
+    y = "Total Activity Counts",
+    caption = "Data from the Advanced Cardiac Care Center of Columbia University Medical Center") +
+  scale_x_continuous(
+    # make the x-axis between 0-24
+    breaks = c(0, 4, 8, 12, 16, 20, 24),
+    labels = c("0", "4", "8", "12", "16", "20", "24"))
+```
+
+The total activity counts increased by hour during a 24-hour period for Friday, Saturday and Monday, and the highest was around 10pm and 12am. However, for Wednesday and Sunday, the hours with highest total activity counts is at the first half of the day, 7am to 11am. For Tuesday and Thursday, there is no significant trend. The activity counts from 12am to 5am were mostly not zero, indicating that the participant was not always asleep during the regular bedtime.
 
 
