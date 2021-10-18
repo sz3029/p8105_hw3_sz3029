@@ -47,7 +47,7 @@ An example of the above observation in the dataset: A customer with id 112108 or
 
 ## Questions
 
-* How many aisles are there, and which aisles are the most items ordered from?
+1. How many aisles are there, and which aisles are the most items ordered from?
 ```{r}
 length(unique(dplyr::pull(instacart, aisle_id)))
 ```
@@ -64,7 +64,7 @@ instacart %>%
 
 The aisle with id 83, "fresh vegetables," is which the most items ordered from, and it is ordered 150609 times.
 
-* Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+2. Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
 ```{r}
 instacart %>%
@@ -79,7 +79,7 @@ instacart %>%
     y = "Number of items ordered")
 ```
 
-* Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+3. Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 
 ```{r}
 instacart %>%
@@ -94,7 +94,7 @@ instacart %>%
   knitr::kable(col.names = c("Aisle", "Product Name", "Count", "Rank"))
 ```
 
-* Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers 
+4. Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers 
 
 ```{r}
 #week_day <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -104,8 +104,11 @@ instacart %>%
   ) %>%
   mutate(order_dow = lubridate::wday(order_dow + 1, label = TRUE)) %>%
   group_by(product_name, order_dow) %>%
-  summarise(mean = mean(order_hour_of_day)) %>%
-  knitr::kable(digits = 1, col.names = c("Product", "Week Day", "Mean hour of the day"))
+  summarise(mean = mean(order_hour_of_day), .groups = "drop") %>%
+  spread(order_dow, mean) %>%
+  knitr::kable(digits = 1, 
+               col.names = c("Product", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
+               caption = "The mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week")
 ```
 
 # Problem 2
@@ -114,14 +117,55 @@ instacart %>%
 ```{r}
 data("brfss_smart2010")
 
-df_brfss_smart2010_clean <- 
+brfss_smart2010 <- 
   brfss_smart2010 %>% 
-  janitor::clean_names()
+  janitor::clean_names() %>%
+  # rename variables
+  rename("location" = locationdesc, 
+         "resp_id" = respid) %>%
+  separate(location, into = c("state", "location"), sep = " - ") %>%
+  select(-locationabbr) %>%
+  # focus on the “Overall Health” topic
+  filter(topic == "Overall Health") %>% 
+  # include only responses from “Excellent” to “Poor”
+  filter(
+    response %in% c("Excellent", "Poor", "Very good", "Good", "Fair")
+    ) %>%
+  mutate(
+    response = factor(response, 
+                      levels = c("Poor", "Fair", "Good", "Very good", "Excellent"), 
+                      ordered = TRUE)) %>%
+  # organize responses as a factor taking levels ordered from “Poor” to “Excellent”
+  arrange(response)
+
+brfss_smart2010
 ```
 
+1. In 2002, which states were observed at 7 or more locations? 
+```{r}
+brfss_smart2010 %>%
+  filter(year == "2002") %>%
+  group_by(state) %>%
+  summarize(count_location = n()) %>%
+  filter(count_location >= 7)
+```
 
+What about in 2010?
+```{r}
+brfss_smart2010 %>%
+  filter(year == "2010") %>%
+  group_by(state) %>%
+  summarize(count_location = n()) %>%
+  filter(count_location >= 7)
+```
 
+2. Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state
 
-
+```{r}
+brfss_smart2010 %>%
+  filter(response == "Excellent") %>%
+  group_by(state, location) %>%
+  summarise(mean_data_value = mean(data_value))
+```
 
 
