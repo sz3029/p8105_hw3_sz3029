@@ -5,13 +5,41 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set()
-```
+# Reproducibility
+set.seed(1)
 
-```{r package, message=FALSE}
 # This chunk loads all the packages used in this homework
 library(tidyverse)
+library(viridis)
+library(ggridges)
+library(patchwork)
+
+# load the dataset library
 library(p8105.datasets)
+
+# General figure set up
+knitr::opts_chunk$set(
+  # display the code in github doc
+  echo = TRUE,
+  # hide warning messages
+  warning = FALSE,
+  # set the figure to be 8 x 6, and the proportion it takes to be 95%
+  fig.width = 10,
+  fig.height = 8, 
+  out.width = "95%"
+)
+
+# setting a global options for continuous data color family and a different format to set discrete data to have a color family
+options(
+  ggplot2.countinuous.colour = "viridis",
+  ggplot2.countinuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+# have a minimal theme and legends at the bottom
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
 # Problem 1
@@ -19,79 +47,111 @@ library(p8105.datasets)
 ## Load instacart dataset
 ```{r load_instacart}
 data("instacart")
+
+instacart
 ```
 
 ## Description of the dataset
 
-The instacart dataset contains `r nrow(instacart)` observations of `r ncol(instacart)` variables. The variables are: ``r names(instacart)``. Some key variables are: 
+The instacart dataset contains `r nrow(instacart)` observations of `r ncol(instacart)` variables. The variables are: `r names(instacart)`, described below: 
 
 * ``r names(instacart)[1]``: order identifier, contains `r length(unique(dplyr::pull(instacart, order_id)))` individual orders
 
 * ``r names(instacart)[2]``: product identifier, contains `r length(unique(dplyr::pull(instacart, product_id)))` individual products
 
+* ``r names(instacart)[3]``: order in which each product was added to cart
+
 * ``r names(instacart)[4]``: 1 if the product has been ordered by this user in the past, 0 otherwise
 
 * ``r names(instacart)[5]``: customer identifier, contains `r length(unique(dplyr::pull(instacart, user_id)))` individual customers
+
+* `r names(instacart)[6]``: which evaluation set this order belongs in _(Note that the data for use in this class is exclusively from the “train” eval_set)_
 
 * ``r names(instacart)[7]``: the order sequence number for this user
 
 * ``r names(instacart)[8]``: the day of the week on which the order was placed
 
+* ``r names(instacart)[9]``: the hour of the day on which the order was placed
+
+* `r names(instacart)[10]``: days since the last order, capped at 30, NA if order_number=1
+
+* ``r names(instacart)[11]``: name of the product
+
 * ``r names(instacart)[12]``: aisle identifier, contains `r length(unique(dplyr::pull(instacart, aisle_id)))` aisles
 
 * ``r names(instacart)[13]``: department identifier, contains `r length(unique(dplyr::pull(instacart, department_id)))` departments
 
+* ``r names(instacart)[14]``: name of the aisle
+
+* ``r names(instacart)[15]``: name of the department
+
+An example of an observation in the dataset: 
+
 `r instacart[1,] %>% knitr::kable()`
 
-An example of the above observation in the dataset: A customer with id 112108 ordered "Bulgarian Yogurt" (product id 49302) from department "dairy eggs," aisle "yogurt". This was his/her 4th order at instacart, and the product was a re-ordered product for him/her, as well as the first order added to cart. The order was placed at Thursday 10am, and it was 9 days after his/her last order. 
+A customer with id 112108 ordered "Bulgarian Yogurt" (product id 49302) from department "dairy eggs," aisle "yogurt". This was his/her 4th order at instacart, and the product was a re-ordered product for him/her, as well as the first order added to cart. The order was placed at Thursday 10am, and it was 9 days after his/her last order. 
 
-## Questions
+## Answers to Questions
 
 1. How many aisles are there, and which aisles are the most items ordered from?
-```{r unique_aisle}
+```{r unique_aisle, collapse=TRUE}
 length(unique(dplyr::pull(instacart, aisle_id)))
 ```
 
 There are 134 aisles.
 
-```{r most_aisle}
+```{r most_aisle, collapse=TRUE}
 instacart %>%
-  group_by(aisle_id) %>%
+  group_by(aisle_id, aisle) %>%
   summarise(count = n()) %>%
-  arrange(desc(count)) %>%
-  slice(1:1)
+  arrange(desc(count))
 ```
 
-The aisle with id 83, "fresh vegetables," is which the most items ordered from, and it is ordered 150609 times.
+The aisle with id 83 ("fresh vegetables") is which the most items ordered from, and it is ordered 150609 times.
 
 2. Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
-```{r hist}
+```{r bar_aisle}
 instacart %>%
-  group_by(aisle_id) %>%
-  filter(n() > 10000) %>%
-  arrange(aisle_id) %>%
-  ggplot(aes(x = aisle_id)) +
-  geom_histogram(binwidth = 2) +
+  group_by(aisle) %>%
+  summarise(aisle_count = n()) %>%
+  # limiting this to aisles with more than 10000 items ordered
+  filter(aisle_count > 10000) %>%
+  # arrange from lowest to highest
+  arrange(aisle_count) %>%
+  # preserve the order
+  mutate(aisle = factor(aisle, levels = aisle)) %>%
+  ggplot(aes(y = aisle, x = aisle_count, fill = aisle)) +
+  # Use bar graph
+  geom_col() +
   labs(
-    title = "Histogram for number of items ordered in each aisle (> 10000 items ordered)",
-    x = "Aisle ID",
-    y = "Number of items ordered")
+    title = "Number of items ordered in each aisle (> 10000 items ordered)",
+    x = "Number of items ordered",
+    y = "Aisle",
+    caption = "Data from Instacart Dataset"
+  )
 ```
 
 3. Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 
 ```{r most_pop, message=FALSE}
 instacart %>%
+  # limit to only the three aisles
   filter(
     aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")
   ) %>%
   group_by(aisle, product_name) %>%
   summarise(count = n()) %>%
   mutate(rank =  dense_rank(desc(count))) %>%
+  # limit to top three popular items
   filter(rank < 4) %>% 
   arrange(aisle, rank) %>%
-  knitr::kable(col.names = c("Aisle", "Product Name", "Count", "Rank"))
+  # make it more readable
+  pivot_wider(
+    names_from = rank,
+    values_from = c(product_name, count)) %>%
+  knitr::kable(col.names = c("aisle", "product_rank_1", "product_rank_2", "product_rank_3",
+                             "product_rank_1_count", "product_rank_2_count", "product_rank_3_count"))
 ```
 
 4. Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers 
@@ -201,8 +261,10 @@ brfss_smart2010_spaghetti %>%
 * Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
 ```{r two_panel_NY}
 brfss_smart2010 %>%
+  # select 2006, 2010 years only, NY only
   filter(year %in% c("2006", "2010"),
          state == "NY") %>%
+  # group by responses
   group_by(response) %>%
   ggplot(aes(x = data_value, fill = response)) +
   geom_density(alpha = .4, adjust = .5, color = "blue") +
@@ -212,7 +274,7 @@ brfss_smart2010 %>%
     y = "Density",
     caption = "Data from the BRFSS SMART dataset"
   ) +
-  facet_grid(year ~ response)
+  facet_grid(. ~ year)
 ```
 
 # Problem 3
@@ -269,22 +331,23 @@ The accelerometer data contains `r nrow(df_accel)` observations of `r ncol(df_ac
 ## Analysis focus on the total activity over the day
 
 ```{r d3_day_count, message = FALSE}
-# create the data frame
-df_accel_amount_day <- 
+df_accel_day <- 
   df_accel %>% 
   group_by(week, day) %>% 
+  #  aggregate across minutes to create a total activity each day
   mutate(total_counts_in_a_day = sum(activity_counts)) %>% 
   select(-activity_counts, -minute_order) %>% 
+  # Remove redundant lines
   distinct() %>% 
   arrange(week, day)
 ```
 
 Create a table for total activity over the day
 
-`r knitr::kable(df_accel_amount_day, digits = 2, caption = "Total activity over the day")`
+`r knitr::kable(df_accel_day, digits = 2, caption = "Total activity over the day")`
 
 ```{r plot_day_counts}
-df_accel_amount_day %>% 
+df_accel_day %>% 
   ggplot(aes(x = day_id, y = total_counts_in_a_day)) +
   # create a scatterplot
   geom_point(aes(color = weekday_weekend)) +
@@ -294,13 +357,18 @@ df_accel_amount_day %>%
   labs(
     title = "Trend Plot for Sum of Day Value Across Days",
     x = "Days",
-    y = "Total Activity Counts for Each Day",
+    y = "Total Activity Counts Each Day",
     caption = "Data from the Advanced Cardiac Care Center of CUMC"
   ) +
   scale_x_continuous(
     # make the x-axis 1-35
     breaks = c(1, 7, 14, 21, 28, 35),
     labels = c('1', '7', '14', '21', '28', '35')
+  ) +
+  scale_y_continuous(
+    # make the x-axis 1-35
+    breaks = c(0, 200000, 400000, 600000),
+    labels = c('0', '200000', '400000', '600000')
   )
 ```
 
